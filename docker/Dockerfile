@@ -1,19 +1,16 @@
-# Stage 1: build deps
-FROM python:3.11-slim AS builder
+FROM python:3.11-alpine AS builder
+
+RUN apk update && apk upgrade
+
 
 WORKDIR /app
 COPY . .
-RUN make install-dev
-RUN make test
+RUN pip install .
+RUN pip install pytest>=6.2.5
+RUN pip install pytest-asyncio==0.25.3
+RUN pip install httpx==0.28.1
 
-# Stage 2: runtime
-FROM python:3.11-slim
 
-WORKDIR /app
-COPY --from=builder /app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-COPY docker/src ./src
-
-# IMPORTANT: порт должен быть 60080 (или тот, что выдали тебе)
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "60080"]
+#CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "60080"]
+CMD pytest tests
