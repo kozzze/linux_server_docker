@@ -11,31 +11,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: kubsu
+          POSTGRES_PASSWORD: kubsu
+          POSTGRES_DB: kubsu
+        ports:
+          - 5432:5432
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: checkout
+      uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Cache Docker layers
-      uses: actions/cache@v3
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v3
-      with:
-        context: .
-        file: ./docker/Dockerfile
-        push: false  
-        tags: your-image-name:latest
-
-    - name: Run tests
+    - name: Build the Docker image and Publish
       run: |
-        docker-compose -f docker/docker-compose.yml up -d
-        docker-compose -f docker/docker-compose.yml exec -T app pytest tests/
+        tree
+        cd docker
+        docker build -t "test" . 
+
+    - name: run tests
+      run: |
+        docker run -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" test
