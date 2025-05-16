@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/web-app  # Измените на своё название
+  IMAGE_NAME: ${{ github.repository }}/web-app  
 
 jobs:
   build-and-push:
@@ -38,7 +38,7 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker  # Если Dockerfile лежит в папке docker
+          context: ./docker  
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
