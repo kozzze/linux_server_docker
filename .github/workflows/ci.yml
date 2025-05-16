@@ -32,4 +32,4 @@ jobs:
 
     - name: run tests
       run: |
-        docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" test
+        docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" test pytest test
