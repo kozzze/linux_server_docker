@@ -32,4 +32,4 @@ jobs:
 
     - name: run tests
       run: |
-        docker run -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@localhost:5432/kubsu" test
+        docker run -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@postgres:5432/kubsu" test
