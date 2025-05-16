@@ -13,4 +13,4 @@ RUN pip install httpx==0.28.1
 
 
 #CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "60080"]
-CMD pytest tests
+#CMD pytest tests
