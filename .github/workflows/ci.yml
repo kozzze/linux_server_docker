@@ -48,7 +48,7 @@ jobs:
         run: |
           docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest pytest tests
 
-            - name: Deploy to server via SSH
+      - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
