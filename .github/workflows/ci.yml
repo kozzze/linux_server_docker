@@ -51,6 +51,10 @@ jobs:
       - name: Set up SSH
         run: |
           eval $(ssh-agent)
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "SSH_PRIVATE_KEY не задан!"
+            exit 1
+          fi
           echo "${{ secrets.SSH_PRIVATE_KEY }}" | ssh-add -
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
