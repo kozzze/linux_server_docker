@@ -47,3 +47,15 @@ jobs:
       - name: Run tests
         run: |
           docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest pytest tests
+
+            - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker stop web-app || true
+            docker rm web-app || true
+            docker run -d --name web-app -p 60080:60080 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
