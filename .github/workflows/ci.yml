@@ -68,4 +68,3 @@ jobs:
           podman run -d --name myapp \
           --network=host \
           myapp:final"
-          
