@@ -1,16 +1,13 @@
-FROM python:3.11-alpine
-
-RUN apk update && apk upgrade
-
-
+FROM python:3.10.17-alpine3.21 as builder
 WORKDIR /app
+COPY pyproject.toml ./
+RUN pip install .[test]
 COPY . .
-RUN pip install .
-RUN pip install pytest>=6.2.5
-RUN pip install pytest-asyncio==0.25.3
-RUN pip install httpx==0.28.1
 
-
-
-#CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "60080"]
-#CMD pytest tests
+FROM python:3.10.17-alpine3.21
+RUN adduser -D appuser
+WORKDIR /app
+COPY --from=builder /app /app
+RUN pip install --no-cache-dir .
+USER appuser
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "твой порт с листа ", "--reload"]
