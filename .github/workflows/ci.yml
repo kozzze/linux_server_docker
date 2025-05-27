@@ -50,34 +50,30 @@ jobs:
 
       - name: Set up SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          if [ -n "$SSH_PASSPHRASE" ]; then
-            echo "Ключ защищён паролем"
-            ssh-keygen -p -P "$SSH_PASSPHRASE" -N "" -f ~/.ssh/id_rsa
+          eval $(ssh-agent)
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "SSH_PRIVATE_KEY не задан!"
+            exit 1
           fi
-          ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          echo "$SSH_PRIVATE_KEY" | ssh-add -
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-
-      - name: Tag image for deployment
-        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest myapp:final
-
+          
       - name: Deploy to remote server
         run: |
-          docker save myapp:final | ssh -i ~/.ssh/id_rsa \
+          docker save myapp:final | ssh -o StrictHostKeyChecking=no \
           -p ${{ secrets.PORT }} \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
           "podman load && podman tag myapp:final myapp:final"
-          
-          ssh -i ~/.ssh/id_rsa \
+
+          ssh -o StrictHostKeyChecking=no \
           -p ${{ secrets.PORT }} \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
-          "podman stop myapp || true && \
-          podman rm myapp || true && \
+          "podman stop myapp  true && \
+          podman rm myapp  true && \
           podman run -d --name myapp \
           --network=host \
           myapp:final"
+
+          
