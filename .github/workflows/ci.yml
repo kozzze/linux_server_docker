@@ -35,10 +35,10 @@ jobs:
           done
 
       - name: Build Docker image
-        run: docker build -t myapp:test .
+        run: docker build -t myapp:test -f linux_server_docker/docker/Dockerfile .
 
       - name: Build test image
-        run: docker build --target builder -t myapp:test .
+        run: docker build --target builder -t myapp:test-builder -f linux_server_docker/docker/Dockerfile .
 
       - name: Run tests
         run: |
