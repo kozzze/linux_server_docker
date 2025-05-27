@@ -1,8 +1,12 @@
-name: CI-CD  
+name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/web-app  
 
 jobs:
   build-and-push:
@@ -42,29 +46,34 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --rm \
-          --network host \
-          -e PYTHONPATH=/app \
-          myapp:test pytest tests
-
-      - name: Build prod image
-        run: docker build -t myapp:final .
-
+          docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest pytest tests
 
       - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.5.4 
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          if [ -n "$SSH_PASSPHRASE" ]; then
+            echo "Ключ защищён паролем"
+            ssh-keygen -p -P "$SSH_PASSPHRASE" -N "" -f ~/.ssh/id_rsa
+          fi
+          ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
 
+      - name: Tag image for deployment
+        run: docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest myapp:final
 
       - name: Deploy to remote server
         run: |
-          docker save myapp:final | ssh -o StrictHostKeyChecking=no \
+          docker save myapp:final | ssh -i ~/.ssh/id_rsa \
           -p ${{ secrets.PORT }} \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
           "podman load && podman tag myapp:final myapp:final"
-
-          ssh -o StrictHostKeyChecking=no \
+          
+          ssh -i ~/.ssh/id_rsa \
           -p ${{ secrets.PORT }} \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
           "podman stop myapp || true && \
