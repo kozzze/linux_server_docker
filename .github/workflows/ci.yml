@@ -45,8 +45,8 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
       - name: Run tests
         run: |
-          docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest pytest tests
-      - name: Set up SSH
+          docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ 
+          env.IMAGE_NAME }}:latest pytest tests- name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.4 
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
