@@ -1,65 +1,62 @@
-name: Build and Push Docker Image
+name: CI-CD  
 
 on:
   push:
-    branches: [ "main" ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/web-app  
+    branches: [main]
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    services:
+  build-test-deploy: 
+    runs-on: self-hosted 
+
+    services:  
       postgres:
-        image: postgres
-        env:
+        image: postgres:14  
+        env: 
+          POSTGRES_DB: kubsu
           POSTGRES_USER: kubsu
           POSTGRES_PASSWORD: kubsu
-          POSTGRES_DB: kubsu
         ports:
-          - 5432:5432
-    permissions:
-      contents: read
-      packages: write
+          - 5432:5432  
+        options: >- 
+          --health-cmd "pg_isready -U kubsu"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 5
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U kubsu; do
+            echo "Waiting"
+            sleep 3
+          done
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./docker  
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Build Docker image
+        run: docker build -t myapp:test .
+
+      - name: Build test image
+        run: docker build --target builder -t myapp:test .
 
       - name: Run tests
         run: |
-          docker run --network=host -e DATABASE_URL="postgresql+psycopg://kubsu:kubsu@127.0.0.1:5432/kubsu" ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest pytest tests
+          docker run --rm \
+          --network host \
+          -e PYTHONPATH=/app \
+          myapp:test pytest tests
+
+      - name: Build prod image
+        run: docker build -t myapp:final .
+
 
       - name: Set up SSH
-        run: |
-          eval $(ssh-agent)
-          if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "SSH_PRIVATE_KEY не задан!"
-            exit 1
-          fi
-          echo "$SSH_PRIVATE_KEY" | ssh-add -
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
-          
+        uses: webfactory/ssh-agent@v0.5.4 
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+
       - name: Deploy to remote server
         run: |
           docker save myapp:final | ssh -o StrictHostKeyChecking=no \
@@ -70,10 +67,8 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
           -p ${{ secrets.PORT }} \
           ${{ secrets.USER }}@${{ secrets.HOST }} \
-          "podman stop myapp  true && \
-          podman rm myapp  true && \
+          "podman stop myapp || true && \
+          podman rm myapp || true && \
           podman run -d --name myapp \
           --network=host \
           myapp:final"
-
-          
